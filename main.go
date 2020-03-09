@@ -108,6 +108,11 @@ func main() {
 		return
 	}
 
+	if len(osDeleted) == 0 && len(awsDeleted) == 0 && len(gcpDeleted) == 0 {
+		fmt.Printf("%s: no VM deleted, not sending the Slack message.\n", yel("Note"))
+		return
+	}
+
 	msg := fmt.Sprintf("c4 removed instances that were older than `%v`:\n", *olderThan)
 	for _, vm := range osDeleted {
 		msg += fmt.Sprintf("- aws instance `%s` (region: %s, age: %s)\n", vm.Name, *osRegion, osAge(vm))
