@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun bool, olderThan time.Duration) error {
+func nukeAWSInstances(accessKey, secretKey, region string, regex *regexp.Regexp, dryRun bool, olderThan time.Duration) ([]ec2.Instance, error) {
 	sconf := aws.NewConfig().WithCredentials(
 		credentials.NewStaticCredentials(
 			accessKey,
@@ -21,25 +22,27 @@ func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun 
 	sconf = sconf.WithRegion(region)
 	sess, err := session.NewSession(sconf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	ec2client := ec2.New(sess)
-	res, err := ec2client.DescribeInstances(&ec2.DescribeInstancesInput{Filters: []*ec2.Filter{
-		{
-			Name:   aws.String("tag:Name"),
-			Values: aws.StringSlice([]string{"*" + nameContains + "*"}),
-		},
-	}})
+	res, err := ec2client.DescribeInstances(&ec2.DescribeInstancesInput{})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	var ids []*string
+
+	var toBeDeleted []ec2.Instance
+	var toBeDeletedIds []*string // needed for TerminateInstances
 	for _, reserv := range res.Reservations {
 		for _, instance := range reserv.Instances {
-			age := time.Now().Sub(*instance.LaunchTime)
-			name := findTagOrEmpty(instance.Tags, "Name")
+			name := awsName(*instance)
+			if !regex.MatchString(name) {
+				continue
+			}
+
+			age := awsAge(*instance)
 			if age >= olderThan {
-				ids = append(ids, instance.InstanceId)
+				toBeDeleted = append(toBeDeleted, *instance)
+				toBeDeletedIds = append(toBeDeletedIds, instance.InstanceId)
 				fmt.Printf("found aws instance %s (%s), removing since age is %s\n", yel(name), *instance.InstanceId, red(age.String()))
 			} else {
 				fmt.Printf("found aws instance %s (%s), keeping it since age is %s\n", yel(name), *instance.InstanceId, green(age.String()))
@@ -47,25 +50,29 @@ func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun 
 		}
 	}
 
-	if dryRun || len(ids) == 0 {
-		return nil
+	if dryRun || len(toBeDeletedIds) == 0 {
+		return toBeDeleted, nil
 	}
 	_, err = ec2client.TerminateInstances(&ec2.TerminateInstancesInput{
-		InstanceIds: ids,
+		InstanceIds: toBeDeletedIds,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return toBeDeleted, nil
 }
 
-func findTagOrEmpty(tags []*ec2.Tag, tag string) string {
-	for _, t := range tags {
-		if *t.Key == tag {
+func awsName(instance ec2.Instance) string {
+	for _, t := range instance.Tags {
+		if *t.Key == "Name" {
 			return *t.Value
 		}
 	}
 
 	return ""
+}
+
+func awsAge(instance ec2.Instance) time.Duration {
+	return time.Now().Sub(*instance.LaunchTime)
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -10,14 +10,23 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
+// This struct is only used for returning which VMs have been deleted so
+// that we can send a nice Slack message.
+type vm struct {
+	name     string // e.g. content of tag:Name on aws, name in gcp & openstack
+	provider string // e.g.: gcp, aws, openstack
+	region   string // e.g.: eu-west1 (aws), europe-west-1a (gcp), UK1 (openstack)
+	id       string // Is empty on gcp.
+}
+
 // The tenant name is the same as project name. The domain name is very
 // often just "Default" in most OpenStack instances. The region is e.g.
 // "UK1" depending on your OpenStack instance.
-func nukeOpenStackInstances(region, authURL, domainName, username, password, projectName, nameContains string, dryRun bool, olderThan time.Duration) error {
+func nukeOpenStackInstances(region, authURL, domainName, username, password, projectName string, regex *regexp.Regexp, dryRun bool, olderThan time.Duration) ([]servers.Server, error) {
 	providerClient, err := openstack.NewClient(authURL)
 
 	if err != nil {
-		return fmt.Errorf("could not create an openstack client: %w", err)
+		return nil, fmt.Errorf("could not create an openstack client: %w", err)
 	}
 
 	err = openstack.Authenticate(providerClient, gophercloud.AuthOptions{
@@ -29,7 +38,7 @@ func nukeOpenStackInstances(region, authURL, domainName, username, password, pro
 		AllowReauth:      true,
 	})
 	if err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
+		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
 	computeClient, err := openstack.NewComputeV2(providerClient, gophercloud.EndpointOpts{
@@ -37,27 +46,27 @@ func nukeOpenStackInstances(region, authURL, domainName, username, password, pro
 		Availability: gophercloud.AvailabilityPublic,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	p, err := servers.List(computeClient, servers.ListOpts{}).AllPages()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	servs, err := servers.ExtractServers(p)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var ids []string
+	var toBeDeleted []servers.Server
 	for _, s := range servs {
-		if !strings.Contains(s.Name, nameContains) {
+		if !regex.MatchString(s.Name) {
 			continue
 		}
 
-		age := time.Now().Sub(s.Created)
+		age := osAge(s)
 		if age >= olderThan {
-			ids = append(ids, s.ID)
+			toBeDeleted = append(toBeDeleted, s)
 			fmt.Printf("found openstack instance %s (%s), removing since age is %s\n", yel(s.Name), s.ID, red(age.String()))
 		} else {
 			fmt.Printf("found openstack instance %s (%s), keeping it since age is %s\n", yel(s.Name), s.ID, green(age.String()))
@@ -65,14 +74,19 @@ func nukeOpenStackInstances(region, authURL, domainName, username, password, pro
 	}
 
 	if dryRun {
-		return nil
+		return toBeDeleted, nil
 	}
-	for _, id := range ids {
-		err := servers.Delete(computeClient, id).ExtractErr()
+
+	for _, s := range toBeDeleted {
+		err := servers.Delete(computeClient, s.ID).ExtractErr()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return toBeDeleted, nil
+}
+
+func osAge(s servers.Server) time.Duration {
+	return time.Now().Sub(s.Created)
 }

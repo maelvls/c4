@@ -25,7 +25,7 @@ GCP, it will work on all regions simultanously.
 ```sh
 % go install github.com/ori-edge/c4
 % source .passrc
-% c4 --aws-name-contains="-test-" --os-name-contains="-test-" --older-than=24h
+% c4 --aws-regex="(test|example)-" --os-regex="(test|example)-" --older-than=24h
 
 Removing anything older than 24h0m0s.
 Note: running in dry-mode. To actually delete things, add --do-it.
@@ -45,38 +45,67 @@ actually delete them.
 ```sh
 % c4 --help
 Usage of c4:
-  -aws-name-contains string
-    	Selects AWS instances where tag:Name contains this string.
+  -aws-regex string
+    	Selects AWS instances where tag:Name contains this string. Example: (test|example) (default ".*")
   -do-it
     	By default, nothing is deleted. This flag enable deletion.
-  -gcp-name-contains string
-    	Selects OpenStack instances where the instance name contains this string.
+  -gcp-regex string
+    	Selects OpenStack instances where the instance name contains this string. Example: (test|example) (default ".*")
   -older-than duration
     	Only delete resources older than this specified value. Can be any valid Go duration, such as 10m or 8h. (default 24h0m0s)
-  -os-name-contains string
-    	Selects OpenStack instances where the instance name contains this string.
+  -os-regex string
+    	Selects OpenStack instances where the instance name contains this string. Example: (test|example) (default ".*")
+  -slack-channel string
+    	With this argument, c4 sends a message to this channel whenever VMs are deleted (doesn't send anything when this flag isn't passed). Requires SLACK_TOKEN to be set.
+  -version
+    	Watch out, returns 'n/a (commit none, built on unknown)' when built with 'go get'.
 
-Mandatory environment variables:
+Environment variables:
   AWS_ACCESS_KEY_ID
-    	The AWS access key.
+    	The AWS access key. (mandatory)
   AWS_SECRET_ACCESS_KEY
-    	The AWS secret key.
+    	The AWS secret key. (mandatory)
   AWS_REGION
-    	The AWS region.
+    	The AWS region. (mandatory)
   OS_USERNAME
-    	
+    	 (mandatory)
   OS_PASSWORD
-    	
+    	 (mandatory)
   OS_AUTH_URL
-    	Often looks like http://host/identity/v3.
+    	Often looks like http://host/identity/v3. (mandatory)
   OS_PROJECT_NAME
-    	Also called 'tenant name'.
+    	Also called 'tenant name'. (mandatory)
   OS_REGION
-    	E.g., UK1 (for OVH).
+    	E.g., UK1 (for OVH). (mandatory)
   OS_PROJECT_DOMAIN_NAME
-    	That's "Default" for most OpenStack instances.
+    	That's "Default" for most OpenStack instances. (mandatory)
   GCP_JSON_KEY
-    	The content of the json key in plain text, not base-64 encoded.
-exit status 2
-
+    	The content of the json key in plain text, not base-64 encoded. (mandatory)
+  SLACK_TOKEN
+    	Slack OAuth token, create one at https://api.slack.com/apps.
 ```
+
+## Slack
+
+Optionally, you can set `SLACK_TOKEN` and `--slack-channel` to send a Slack
+message that sums up all the VMs that were deleted:
+
+- create a [Slack App](https://api.slack.com/apps/) with the name `c4` (for
+  example),
+- add the Bot Token Scope `chat:write`,
+- Copy the OAuth Access Token and use it as `SLACK_TOKEN`,
+- Add `c4` to the channel you want the bot to be sending messages to.
+
+## Changelog
+
+## v1.0.0 - 9 March 2019
+
+- Feature: use `--gcp-regex`, `--aws-regex` and `--os-regex` to filter
+  which VMs should be removed. You can test the regex using
+  <https://regex101.com> (flavor: Golang).
+- Feature: to actually delete VMs, use `--do-it`. By default, it will run
+  in dry-run mode.
+- Feature: use `SLACK_TOKEN` and `--slack-channel` to let your team know
+  which VMs have been wiped.
+- Feature: credentials are passed through env variables. To list them, use
+  `--help`.

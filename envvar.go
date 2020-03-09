@@ -8,22 +8,44 @@ import (
 )
 
 // Just used for displaying help.
-var envvars []struct{ key, usage string }
+type envVar struct {
+	key, usage string
+	mandatory  bool
+	value      *string
+}
+
+var envVars []envVar
 
 func EnvvarUsage() string {
 	var usage []string
-	for _, elmt := range envvars {
-		usage = append(usage, fmt.Sprintf("  %s\n    \t%s", elmt.key, elmt.usage))
+	for _, elmt := range envVars {
+		isMandatory := ""
+		if elmt.mandatory {
+			isMandatory = " (mandatory)"
+		}
+		usage = append(usage, fmt.Sprintf("  %s\n    \t%s%s", elmt.key, elmt.usage, isMandatory))
 	}
 	return strings.Join(usage, "\n")
 }
 
-func MustGetenv(key string, usage string) string {
-	envvars = append(envvars, struct{ key, usage string }{key: key, usage: usage})
-	res := os.Getenv(key)
-	if res == "" {
-		fmt.Fprintf(flag.CommandLine.Output(), "%s: the env var %s is not set or is empty. Did you forget to '%s'?\n", red("error"), yel(key), green("source .passrc"))
-		os.Exit(123)
+func MustGetenv(key string, usage string) *string {
+	value := ""
+	envVars = append(envVars, envVar{key: key, usage: usage, mandatory: true, value: &value})
+	return &value
+}
+
+func OptionalGetenv(key string, usage string) *string {
+	value := ""
+	envVars = append(envVars, envVar{key: key, usage: usage, value: &value})
+	return &value
+}
+
+func ParseEnv() {
+	for _, v := range envVars {
+		*v.value = os.Getenv(v.key)
+		if v.mandatory && *v.value == "" {
+			fmt.Fprintf(flag.CommandLine.Output(), "%s: the env var %s is not set or is empty. Did you forget to '%s'?\n", red("error"), yel(v.key), green("source .passrc"))
+			os.Exit(123)
+		}
 	}
-	return res
 }
