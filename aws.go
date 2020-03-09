@@ -10,23 +10,26 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func nukeAWSInstances() error {
+func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun bool) error {
 	sconf := aws.NewConfig().WithCredentials(
 		credentials.NewStaticCredentials(
-			awsAccessKey,
-			awsSecretKey,
+			accessKey,
+			secretKey,
 			"",
 		),
 	)
-	sconf = sconf.WithRegion(awsRegion)
+	sconf = sconf.WithRegion(region)
 	sess, err := session.NewSession(sconf)
 	if err != nil {
 		return err
 	}
 	ec2client := ec2.New(sess)
-	res, err := ec2client.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{{Name: aws.String("tag:Name"), Values: []*string{awsNameFilter}}},
-	})
+	res, err := ec2client.DescribeInstances(&ec2.DescribeInstancesInput{Filters: []*ec2.Filter{
+		{
+			Name:   aws.String("tag:Name"),
+			Values: aws.StringSlice([]string{"*" + nameContains + "*"}),
+		},
+	}})
 	if err != nil {
 		return err
 	}
@@ -44,7 +47,7 @@ func nukeAWSInstances() error {
 		}
 	}
 
-	if *dryRun {
+	if dryRun {
 		return nil
 	}
 	_, err = ec2client.TerminateInstances(&ec2.TerminateInstancesInput{
