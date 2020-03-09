@@ -52,4 +52,4 @@ fi
 
 curl -s -H 'Accept:application/octet-stream' \
   "https://$TOKEN:@api.github.com/repos/$REPO/releases/assets/$asset_id" \
-  -OL >"$2"
+  -L -o "$2"

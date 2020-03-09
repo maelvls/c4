@@ -1,24 +1,14 @@
 version: 2
 
-workflows:
-  cleanup-vms:
-    triggers:
-      - schedule:
-          cron: "*/10 * * * *"
-          filters:
-            branches:
-              only:
-                - master
 jobs:
-  cleanup-vms:
-    docker:
-      - image: alpine:latest
+  nuke_vms:
+    docker: [image: "alpine:latest"]
     environment:
       # These variables are needed by 'c4'. Some of these are stored in
       # Circle CI: GCP_JSON_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY,
       # OS_USERNAME OS_PASSWORD, SLACK_TOKEN, SLACK_CHANNEL.
       AWS_REGION: eu-west-3
-      OS_AUTH_URL: https://auth.cloud.ovh.net
+      OS_AUTH_URL: "https://auth.cloud.ovh.net"
       OS_PROJECT_NAME: "5495309338714580"
       OS_REGION: UK1
       OS_IDENTITY_API_VERSION: "3"
@@ -30,3 +20,24 @@ jobs:
       - run: ./.circleci/gh-dl-release latest c4_linux_amd64
       - run: chmod +x c4_linux_amd64
       - run: ./c4_linux_amd64 --aws-name-contains="(test|example)" --os-name-contains="(test|example)" --gcp-name-contains="(test|example)" --do-it --older-than=1h --slack-channel=$SLACK_CHANNEL
+
+workflows:
+  version: 2
+  nuke_vms:
+    jobs:
+      - nuke_vms
+    triggers:
+      - schedule:
+          # I tried every 10 minutes "*/10 * * * *" but circleci would fail
+          # and throw a yaml validation error. Apparently they don't
+          # actually implemented the actual cronjob, although they annouce
+          # they do on
+          # https://circleci.com/docs/2.0/configuration-reference/#cron
+          #
+          # So in the meantime, I'll set the cron job to every hour.
+          cron: "0 * * * *"
+          filters:
+            branches:
+              only:
+                - master
+                - branch-for-circle-ci-testing
