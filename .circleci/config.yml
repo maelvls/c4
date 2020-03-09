@@ -1,8 +1,13 @@
 version: 2
 
 jobs:
-  nuke_vms:
-    docker: [image: "alpine:latest"]
+  build:
+    docker:
+      # the circleci/* images are just too much in this case. I just want
+      # jq, git, bash and curl (cimg is also circleci's images) but I gave
+      # up since circleci expects so many things on these images. I picked
+      # Go since I hope the size of the image isn't too big.
+      - image: "cimg/go:1.14"
     environment:
       # These variables are needed by 'c4'. Some of these are stored in
       # Circle CI: GCP_JSON_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY,
@@ -16,26 +21,22 @@ jobs:
 
     steps:
       - checkout
-      - run: apk add curl jq
-      - run: ./.circleci/gh-dl-release latest c4_linux_amd64
-      - run: chmod +x c4_linux_amd64
-      - run: ./c4_linux_amd64 --aws-name-contains="(test|example)" --os-name-contains="(test|example)" --gcp-name-contains="(test|example)" --do-it --older-than=1h --slack-channel=$SLACK_CHANNEL
+      - run: sudo apt install curl jq
+      - run: ./.circleci/gh-dl-release latest c4_linux_amd64 && chmod +x c4_linux_amd64
+      - run: ./c4_linux_amd64 --version
+      - run: ./c4_linux_amd64 --aws-regex="(test|example)" --os-regex="(test|example)" --gcp-regex="(test|example)" --do-it --older-than=1h --slack-channel=$SLACK_CHANNEL
 
 workflows:
   version: 2
   nuke_vms:
     jobs:
-      - nuke_vms
+      - build
     triggers:
       - schedule:
-          # I tried every 10 minutes "*/10 * * * *" but circleci would fail
-          # and throw a yaml validation error. Apparently they don't
-          # actually implemented the actual cronjob, although they annouce
-          # they do on
-          # https://circleci.com/docs/2.0/configuration-reference/#cron
-          #
-          # So in the meantime, I'll set the cron job to every hour.
-          cron: "0 * * * *"
+          # Circle CI don't really fully support cron. The */30 (every 30
+          # minutes) doesn't work.
+          # https://discuss.circleci.com/t/schedule-workflow-doesnt-work/17948/2
+          cron: "0,30 * * * *"
           filters:
             branches:
               only:

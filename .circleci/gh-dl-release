@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 #
 # gh-dl-release! It works!
 #
@@ -31,7 +31,7 @@ GITHUB="https://api.github.com"
 
 alias errcho='>&2 echo'
 
-function gh_curl() {
+gh_curl() {
   curl -H "Authorization: token $TOKEN" \
     -H "Accept: application/vnd.github.v3.raw" \
     "$@"
