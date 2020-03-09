@@ -1,0 +1,32 @@
+version: 2
+
+workflows:
+  cleanup-vms:
+    triggers:
+      - schedule:
+          cron: "*/10 * * * *"
+          filters:
+            branches:
+              only:
+                - master
+jobs:
+  cleanup-vms:
+    docker:
+      - image: alpine:latest
+    environment:
+      # These variables are needed by 'c4'. Some of these are stored in
+      # Circle CI: GCP_JSON_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY,
+      # OS_USERNAME OS_PASSWORD, SLACK_TOKEN, SLACK_CHANNEL.
+      AWS_REGION: eu-west-3
+      OS_AUTH_URL: https://auth.cloud.ovh.net
+      OS_PROJECT_NAME: "5495309338714580"
+      OS_REGION: UK1
+      OS_IDENTITY_API_VERSION: "3"
+      OS_PROJECT_DOMAIN_NAME: Default
+
+    steps:
+      - checkout
+      - run: apk add curl jq
+      - run: ./.circleci/gh-dl-release latest c4_linux_amd64
+      - run: chmod +x c4_linux_amd64
+      - run: ./c4_linux_amd64 --aws-name-contains="(test|example)" --os-name-contains="(test|example)" --gcp-name-contains="(test|example)" --do-it --older-than=1h --slack-channel=$SLACK_CHANNEL
