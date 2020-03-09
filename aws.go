@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun bool) error {
+func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun bool, olderThan time.Duration) error {
 	sconf := aws.NewConfig().WithCredentials(
 		credentials.NewStaticCredentials(
 			accessKey,
@@ -38,7 +38,7 @@ func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun 
 		for _, instance := range reserv.Instances {
 			age := time.Now().Sub(*instance.LaunchTime)
 			name := findTagOrEmpty(instance.Tags, "Name")
-			if age >= *olderThan {
+			if age >= olderThan {
 				ids = append(ids, instance.InstanceId)
 				fmt.Printf("found aws instance %s (%s), removing since age is %s\n", yel(name), *instance.InstanceId, red(age.String()))
 			} else {
@@ -47,7 +47,7 @@ func nukeAWSInstances(accessKey, secretKey, region, nameContains string, dryRun 
 		}
 	}
 
-	if dryRun {
+	if dryRun || len(ids) == 0 {
 		return nil
 	}
 	_, err = ec2client.TerminateInstances(&ec2.TerminateInstancesInput{

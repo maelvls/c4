@@ -17,16 +17,15 @@ at removing anything that costs $$. Claudia wanted to call it
       any,
   - `--help` shows all the env vars with their description.
 
-`c4` uses enviroment variables for reading AWS, GCP and OpenStack
-credentials and then proceeds we cleaning up all VMs and SGs. Details about
-these env vars is available with `--help`.
+Note: for AWS and OpenStack, it will only focus on one specific region. For
+GCP, it will work on all regions simultanously.
 
 ## Usage
 
 ```sh
 % go install github.com/ori-edge/c4
 % source .passrc
-% c4 --aws-name-contains="-test-" --os-name-contains="-test-"
+% c4 --aws-name-contains="-test-" --os-name-contains="-test-" --older-than=24h
 
 Removing anything older than 24h0m0s.
 Note: running in dry-mode. To actually delete things, add --do-it.
@@ -47,31 +46,37 @@ actually delete them.
 % c4 --help
 Usage of c4:
   -aws-name-contains string
-    	selects AWS instances where tag:Name contains this string
+    	Selects AWS instances where tag:Name contains this string.
   -do-it
     	By default, nothing is deleted. This flag enable deletion.
+  -gcp-name-contains string
+    	Selects OpenStack instances where the instance name contains this string.
   -older-than duration
     	Only delete resources older than this specified value. Can be any valid Go duration, such as 10m or 8h. (default 24h0m0s)
   -os-name-contains string
-    	selects OpenStack instances where the instance name contains this string
+    	Selects OpenStack instances where the instance name contains this string.
 
 Mandatory environment variables:
   AWS_ACCESS_KEY_ID
-    	The AWS access key
+    	The AWS access key.
   AWS_SECRET_ACCESS_KEY
-    	The AWS secret key
+    	The AWS secret key.
   AWS_REGION
-    	The AWS region
+    	The AWS region.
   OS_USERNAME
-
+    	
   OS_PASSWORD
-
+    	
   OS_AUTH_URL
-    	looks like http://host/identity/v3
+    	Often looks like http://host/identity/v3.
   OS_PROJECT_NAME
-    	Also called 'tenant name'
+    	Also called 'tenant name'.
   OS_REGION
-    	e.g., UK1 (for OVH)
+    	E.g., UK1 (for OVH).
   OS_PROJECT_DOMAIN_NAME
-    	that's "Default" for most OpenStack instances
+    	That's "Default" for most OpenStack instances.
+  GCP_JSON_KEY
+    	The content of the json key in plain text, not base-64 encoded.
+exit status 2
+
 ```

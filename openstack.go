@@ -13,7 +13,7 @@ import (
 // The tenant name is the same as project name. The domain name is very
 // often just "Default" in most OpenStack instances. The region is e.g.
 // "UK1" depending on your OpenStack instance.
-func nukeOpenStackInstances(region, authURL, domainName, username, password, projectName, nameContains string, dryRun bool) error {
+func nukeOpenStackInstances(region, authURL, domainName, username, password, projectName, nameContains string, dryRun bool, olderThan time.Duration) error {
 	providerClient, err := openstack.NewClient(authURL)
 
 	if err != nil {
@@ -56,7 +56,7 @@ func nukeOpenStackInstances(region, authURL, domainName, username, password, pro
 		}
 
 		age := time.Now().Sub(s.Created)
-		if age >= *olderThan {
+		if age >= olderThan {
 			ids = append(ids, s.ID)
 			fmt.Printf("found openstack instance %s (%s), removing since age is %s\n", yel(s.Name), s.ID, red(age.String()))
 		} else {
