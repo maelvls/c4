@@ -30,7 +30,8 @@ The `c4` binary is built by Github Actions and uploaded as a Github
 (like the ones containing `node` or `manager`) are not deleted.
 
 Whenever a VM gets deleted, `c4` reminds us of that by sending a Slack
-message to `#infrastructure`.
+message to `#infrastructure`. The Slack app "C4" can be edited by Mael,
+Matt, Claudia, Liam & Joel [here](https://api.slack.com/apps/AURTEPPV1).
 
 ## Usage
 
