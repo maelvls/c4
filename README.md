@@ -110,6 +110,11 @@ message that sums up all the VMs that were deleted:
 
 ## Changelog
 
+## v1.0.1 - 9 March 2019
+
+- Bug: fix a bug where a Slack message was sent even when no VM had been
+  deleted.
+
 ## v1.0.0 - 9 March 2019
 
 - Feature: use `--gcp-regex`, `--aws-regex` and `--os-regex` to filter
