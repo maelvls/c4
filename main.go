@@ -123,6 +123,8 @@ func main() {
 	for _, vm := range gcpDeleted {
 		msg += fmt.Sprintf("- gcp instance `%s` (region: %s, age: %s)\n", vm.Name, shorterGCPURL(vm.Zone), gcpAge(vm))
 	}
+
+	fmt.Printf("Sending a message to the Slack channel %s.\n", bold(*slackChannel))
 	api := slack.New(*slackToken)
 	_, _, _, err = api.SendMessage(*slackChannel, slack.MsgOptionText(msg, false))
 	if err != nil {

@@ -1,4 +1,4 @@
-# Nuke Cloud
+# C4, the VM annihilator
 
 We keep having many leftover VMs when running integration tests. `c4` aims
 at removing anything that costs $$. Claudia wanted to call it
@@ -9,16 +9,28 @@ at removing anything that costs $$. Claudia wanted to call it
   specific to AWS.
 - **Why not duct-tape a bash script?** Because we want a `--older-than 1h`
   flag, and doing that through scripting is a lot of pain.
-- Why the hell did you use environment variables? Env vars are bad and hard
-  to discover! That's because our current local and CI environment have all
-  these env variables through `source .passrc`. And to remediate the issue
-  of discoverability, I did two things:
-  - environment variables must be not empty, so it's easy not to miss
-      any,
+- **Why the hell did you use environment variables?** Env vars are bad and
+  hard to discover! That's because our current local and CI environment
+  have all these env variables through `source .passrc`. And to remediate
+  the issue of discoverability, I did two things:
+  - environment variables must be not empty, so it's easy not to miss any,
   - `--help` shows all the env vars with their description.
 
-Note: for AWS and OpenStack, it will only focus on one specific region. For
-GCP, it will work on all regions simultanously.
+Important: for AWS and OpenStack, it will only focus on one specific
+region. For GCP, it will work on all regions simultanously.
+
+## How is it automated?
+
+The `c4` binary is built by Github Actions and uploaded as a Github
+[release](https://github.com/ori-edge/c4/releases) using
+[goreleaser](https://github.com/goreleaser/goreleaser).
+
+[Every 30 minutes](https://circleci.com/gh/ori-edge/c4), Circle CI runs
+`c4` with the regex `(test|example)` and with `--older-than 1h`. Others VMs
+(like the ones containing `node` or `manager`) are not deleted.
+
+Whenever a VM gets deleted, `c4` reminds us of that by sending a Slack
+message to `#infrastructure`.
 
 ## Usage
 

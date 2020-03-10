@@ -11,7 +11,7 @@ jobs:
     environment:
       # These variables are needed by 'c4'. Some of these are stored in
       # Circle CI: GCP_JSON_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY,
-      # OS_USERNAME OS_PASSWORD, SLACK_TOKEN, SLACK_CHANNEL.
+      # OS_USERNAME OS_PASSWORD, SLACK_TOKEN.
       AWS_REGION: eu-west-3
       OS_AUTH_URL: "https://auth.cloud.ovh.net"
       OS_PROJECT_NAME: "5495309338714580"
@@ -24,7 +24,7 @@ jobs:
       - run: sudo apt install curl jq
       - run: ./.circleci/gh-dl-release latest c4_linux_amd64 && chmod +x c4_linux_amd64
       - run: ./c4_linux_amd64 --version
-      - run: ./c4_linux_amd64 --aws-regex="(test|example)" --os-regex="(test|example)" --gcp-regex="(test|example)" --do-it --older-than=1h --slack-channel=$SLACK_CHANNEL
+      - run: ./c4_linux_amd64 --aws-regex="(test|example)" --os-regex="(test|example)" --gcp-regex="(test|example)" --do-it --older-than=1h --slack-channel=infrastructure
 
 workflows:
   version: 2
