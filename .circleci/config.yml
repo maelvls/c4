@@ -24,7 +24,7 @@ jobs:
       - run: sudo apt install curl jq
       - run: ./.circleci/gh-dl-release latest c4_linux_amd64 && chmod +x c4_linux_amd64
       - run: ./c4_linux_amd64 --version
-      - run: ./c4_linux_amd64 --aws-regex="(test|example)" --os-regex="(test|example)" --gcp-regex="(test|example)" --do-it --older-than=1h --slack-channel=infrastructure
+      - run: ./c4_linux_amd64 --aws-regex="(test|example)" --os-regex="(test|example)" --gcp-regex="(test|example)" --do-it --older-than=1h --slack-channel=test-channel
 
 workflows:
   version: 2
@@ -41,4 +41,7 @@ workflows:
             branches:
               only:
                 - master
+                # If you need to test this cron job before it goes to
+                # master, you can push to 'branch-for-circle-ci-testing'
+                # and it will be run there.
                 - branch-for-circle-ci-testing
