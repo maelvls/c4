@@ -111,6 +111,11 @@ message that sums up all the VMs that were deleted:
 
 ## Changelog
 
+## v1.0.2 - 11 March 2019
+
+- Bug: the Slack message was mixing up AWS and OpenStack, it now properly
+  shows what is what.
+
 ## v1.0.1 - 9 March 2019
 
 - Bug: fix a bug where a Slack message was sent even when no VM had been

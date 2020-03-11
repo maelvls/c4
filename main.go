@@ -115,10 +115,10 @@ func main() {
 
 	msg := fmt.Sprintf("c4 removed instances that were older than `%v`:\n", *olderThan)
 	for _, vm := range osDeleted {
-		msg += fmt.Sprintf("- aws instance `%s` (region: %s, age: %s)\n", vm.Name, *osRegion, osAge(vm))
+		msg += fmt.Sprintf("- openstack instance `%s` (region: %s, age: %s)\n", vm.Name, *osRegion, osAge(vm))
 	}
 	for _, vm := range awsDeleted {
-		msg += fmt.Sprintf("- openstack instance `%s` (region: %s, age: %s)\n", awsName(vm), *awsRegion, awsAge(vm))
+		msg += fmt.Sprintf("- aws instance `%s` (region: %s, age: %s)\n", awsName(vm), *awsRegion, awsAge(vm))
 	}
 	for _, vm := range gcpDeleted {
 		msg += fmt.Sprintf("- gcp instance `%s` (region: %s, age: %s)\n", vm.Name, shorterGCPURL(vm.Zone), gcpAge(vm))
