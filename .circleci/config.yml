@@ -14,7 +14,7 @@ jobs:
       # OS_USERNAME OS_PASSWORD, SLACK_TOKEN.
       AWS_REGION: eu-west-3
       OS_AUTH_URL: "https://auth.cloud.ovh.net"
-      OS_PROJECT_NAME: "5495309338714580"
+      OS_PROJECT_NAME: "6371880630829413"
       OS_REGION: UK1
       OS_IDENTITY_API_VERSION: "3"
       OS_PROJECT_DOMAIN_NAME: Default
