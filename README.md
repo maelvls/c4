@@ -1,5 +1,27 @@
 # C4, the VM annihilator
 
+![CI](https://github.com/ori-edge/c4/workflows/CI/badge.svg)
+
+## Download and install
+
+Get the [binary](https://github.com/ori-edge/kubectl-plugins/releases) or
+go get it with:
+
+```sh
+(cd && GOPRIVATE='github.com/ori-edge/*' GO111MODULE=on go get github.com/ori-edge/c4@master)
+```
+
+Note: git must be able to git over `https`, make sure that you don't need
+to enter a username/password when running `git clone
+https://github.com/ori-edge/c4`.
+
+You can use `c4` to monitor all the VMs that are created for testing
+purposes using `watch --color c4`:
+
+![Demo of c4. This gif is hosted in the description of PR #1](https://user-images.githubusercontent.com/2195781/77187108-3ef3d680-6ad4-11ea-986a-eff98cda5b20.gif)
+
+## Why c4
+
 We keep having many leftover VMs when running integration tests. `c4` aims
 at removing anything that costs $$. Claudia wanted to call it
 `small-spender` but I went to fast and called it `c4`.
