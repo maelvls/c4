@@ -79,10 +79,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Removing anything older than %s.\n", bold(olderThan.String()))
 	dryRun := !*doIt
+
 	if dryRun {
-		fmt.Printf("%s: running in dry-mode. To actually delete things, add %s.\n", yel("Note"), green("--do-it"))
+		fmt.Printf("Showing anything older than %s (to also delete them, add %s).\n", bold(olderThan.String()), green("--do-it"))
+	} else {
+		fmt.Printf("Removing anything older than %s.\n", bold(olderThan.String()))
 	}
 
 	awsDeleted, err := nukeAWSInstances(*awsAccessKey, *awsSecretKey, *awsRegion, awsRegex, dryRun, *olderThan)
@@ -104,27 +106,26 @@ func main() {
 	}
 
 	if *slackToken == "" || *slackChannel == "" {
-		fmt.Printf("%s: skipping sending message on Slack since SLACK_TOKEN or --slack-channel missing.\n", yel("Note"))
 		return
 	}
 
 	if len(osDeleted) == 0 && len(awsDeleted) == 0 && len(gcpDeleted) == 0 {
-		fmt.Printf("%s: no VM deleted, not sending the Slack message.\n", yel("Note"))
 		return
 	}
 
-	msg := fmt.Sprintf("c4 removed instances that were older than `%v`:\n", *olderThan)
+	fmt.Printf("%s: some VMs were deleted, sending a Slack message to #%s.\n", yel("Note"), *slackChannel)
+
+	msg := fmt.Sprintf("c4 removed instances that were older than %v:\n", *olderThan)
 	for _, vm := range osDeleted {
-		msg += fmt.Sprintf("- openstack instance `%s` (region: %s, age: %s)\n", vm.Name, *osRegion, osAge(vm))
+		msg += fmt.Sprintf("- OpenStack: `%s` (%s, age: %s)\n", vm.Name, *osRegion, osAge(vm).Truncate(time.Second))
 	}
 	for _, vm := range awsDeleted {
-		msg += fmt.Sprintf("- aws instance `%s` (region: %s, age: %s)\n", awsName(vm), *awsRegion, awsAge(vm))
+		msg += fmt.Sprintf("- AWS: `%s` (%s, age: %s)\n", awsName(vm), *awsRegion, awsAge(vm).Truncate(time.Second))
 	}
 	for _, vm := range gcpDeleted {
-		msg += fmt.Sprintf("- gcp instance `%s` (region: %s, age: %s)\n", vm.Name, shorterGCPURL(vm.Zone), gcpAge(vm))
+		msg += fmt.Sprintf("- GCP: `%s` (%s, age: %s)\n", vm.Name, shorterGCPURL(vm.Zone), gcpAge(vm).Truncate(time.Second))
 	}
 
-	fmt.Printf("Sending a message to the Slack channel %s.\n", bold(*slackChannel))
 	api := slack.New(*slackToken)
 	_, _, _, err = api.SendMessage(*slackChannel, slack.MsgOptionText(msg, false))
 	if err != nil {

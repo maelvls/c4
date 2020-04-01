@@ -46,9 +46,9 @@ func nukeGCPInstances(jsonKey string, regex *regexp.Regexp, dryRun bool, olderTh
 			age := gcpAge(*inst)
 			if age >= olderThan {
 				toBeDeleted = append(toBeDeleted, *inst)
-				fmt.Printf("found gcp instance %s (%s), removing since age is %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), red(age.String()))
+				fmt.Printf("gcp: %s (%s), age: %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), red(age.Truncate(time.Second).String()))
 			} else {
-				fmt.Printf("found gcp instance %s (%s), keeping it since age is %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), green(age.String()))
+				fmt.Printf("gcp: %s (%s), age: %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), green(age.Truncate(time.Second).String()))
 			}
 		}
 	}

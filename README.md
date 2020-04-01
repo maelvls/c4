@@ -1,19 +1,19 @@
 # C4, the VM annihilator
 
-![CI](https://github.com/ori-edge/c4/workflows/CI/badge.svg)
+[![CI](https://github.com/ori-edge/c4/workflows/CI/badge.svg)](https://github.com/ori-edge/c4/actions)
 
 ## Download and install
 
-Get the [binary](https://github.com/ori-edge/kubectl-plugins/releases) or
-go get it with:
+Get the [binary](https://github.com/ori-edge/c4/releases) or go get it
+with:
 
 ```sh
 (cd && GOPRIVATE='github.com/ori-edge/*' GO111MODULE=on go get github.com/ori-edge/c4@master)
 ```
 
-Note: git must be able to git over `https`, make sure that you don't need
-to enter a username/password when running `git clone
-https://github.com/ori-edge/c4`.
+> Note: git must be able to git over `https`, make sure that you don't need
+> to enter a username/password when running `git clone
+> https://github.com/ori-edge/c4`.
 
 You can use `c4` to monitor all the VMs that are created for testing
 purposes using `watch --color c4`:
