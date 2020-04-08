@@ -64,12 +64,16 @@ func nukeOpenStackInstances(region, authURL, domainName, username, password, pro
 			continue
 		}
 
+		if s.Status == "DELETED" {
+			continue
+		}
+
 		age := osAge(s)
 		if age >= olderThan {
 			toBeDeleted = append(toBeDeleted, s)
-			fmt.Printf("openstack: %s (%s), age: %s\n", yel(s.Name), s.ID, red(age.Truncate(time.Second).String()))
+			fmt.Printf("openstack: %s (%s), age: %s, %s\n", yel(s.Name), s.ID, red(age.Truncate(time.Second).String()), s.Status)
 		} else {
-			fmt.Printf("openstack: %s (%s), age: %s\n", yel(s.Name), s.ID, green(age.Truncate(time.Second).String()))
+			fmt.Printf("openstack: %s (%s), age: %s, %s\n", yel(s.Name), s.ID, green(age.Truncate(time.Second).String()), s.Status)
 		}
 	}
 

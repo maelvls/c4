@@ -43,12 +43,16 @@ func nukeGCPInstances(jsonKey string, regex *regexp.Regexp, dryRun bool, olderTh
 				continue
 			}
 
+			if inst.Status == "TERMINATED" {
+				continue
+			}
+
 			age := gcpAge(*inst)
 			if age >= olderThan {
 				toBeDeleted = append(toBeDeleted, *inst)
-				fmt.Printf("gcp: %s (%s), age: %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), red(age.Truncate(time.Second).String()))
+				fmt.Printf("gcp: %s (%s), age: %s, %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), red(age.Truncate(time.Second).String()), inst.Status)
 			} else {
-				fmt.Printf("gcp: %s (%s), age: %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), green(age.Truncate(time.Second).String()))
+				fmt.Printf("gcp: %s (%s), age: %s, %s\n", yel(inst.Name), shorterGCPURL(inst.Zone), green(age.Truncate(time.Second).String()), inst.Status)
 			}
 		}
 	}

@@ -82,7 +82,7 @@ func main() {
 	dryRun := !*doIt
 
 	if dryRun {
-		fmt.Printf("Showing anything older than %s (to also delete them, add %s).\n", bold(olderThan.String()), green("--do-it"))
+		fmt.Printf("Showing in %s anything older than %s (to also delete them, add %s).\n", red("red"), bold(olderThan.String()), green("--do-it"))
 	} else {
 		fmt.Printf("Removing anything older than %s.\n", bold(olderThan.String()))
 	}
@@ -117,13 +117,13 @@ func main() {
 
 	msg := fmt.Sprintf("c4 removed instances that were older than %v:\n", *olderThan)
 	for _, vm := range osDeleted {
-		msg += fmt.Sprintf("- OpenStack: `%s` (%s, age: %s)\n", vm.Name, *osRegion, osAge(vm).Truncate(time.Second))
+		msg += fmt.Sprintf("- OpenStack: `%s` (%s, age: %s, `%s`)\n", vm.Name, *osRegion, osAge(vm).Truncate(time.Second), vm.Status)
 	}
 	for _, vm := range awsDeleted {
-		msg += fmt.Sprintf("- AWS: `%s` (%s, age: %s)\n", awsName(vm), *awsRegion, awsAge(vm).Truncate(time.Second))
+		msg += fmt.Sprintf("- AWS: `%s` (%s, age: %s, `%s`)\n", awsName(vm), *awsRegion, awsAge(vm).Truncate(time.Second), *vm.State.Name)
 	}
 	for _, vm := range gcpDeleted {
-		msg += fmt.Sprintf("- GCP: `%s` (%s, age: %s)\n", vm.Name, shorterGCPURL(vm.Zone), gcpAge(vm).Truncate(time.Second))
+		msg += fmt.Sprintf("- GCP: `%s` (%s, age: %s, `%s`)\n", vm.Name, shorterGCPURL(vm.Zone), gcpAge(vm).Truncate(time.Second), vm.Status)
 	}
 
 	api := slack.New(*slackToken)

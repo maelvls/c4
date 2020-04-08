@@ -39,13 +39,17 @@ func nukeAWSInstances(accessKey, secretKey, region string, regex *regexp.Regexp,
 				continue
 			}
 
+			if *instance.State.Name == "terminated" {
+				continue
+			}
+
 			age := awsAge(*instance)
 			if age >= olderThan {
 				toBeDeleted = append(toBeDeleted, *instance)
 				toBeDeletedIds = append(toBeDeletedIds, instance.InstanceId)
-				fmt.Printf("aws: %s (%s), age: %s\n", yel(name), *instance.InstanceId, red(age.Truncate(time.Second).String()))
+				fmt.Printf("aws: %s (%s), age: %s, %s\n", yel(name), *instance.InstanceId, red(age.Truncate(time.Second).String()), *instance.State.Name)
 			} else {
-				fmt.Printf("aws: %s (%s), age: %s\n", yel(name), *instance.InstanceId, green(age.Truncate(time.Second).String()))
+				fmt.Printf("aws: %s (%s), age: %s, %s\n", yel(name), *instance.InstanceId, green(age.Truncate(time.Second).String()), *instance.State.Name)
 			}
 		}
 	}
