@@ -7,29 +7,32 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/mgutz/ansi"
 	"github.com/slack-go/slack"
+	"google.golang.org/api/compute/v1"
 )
 
 var (
 	awsRegex     = flag.String("aws-regex", ".*", "Selects AWS instances where tag:Name contains this string. Example: (test|example)")
-	awsAccessKey = MustGetenv("AWS_ACCESS_KEY_ID", "The AWS access key.")
-	awsSecretKey = MustGetenv("AWS_SECRET_ACCESS_KEY", "The AWS secret key.")
-	awsRegion    = MustGetenv("AWS_REGION", "The AWS region.")
+	awsAccessKey = OptionalFlagOrEnv("aws-access-key-id", "AWS_ACCESS_KEY_ID", "The AWS access key.")
+	awsSecretKey = OptionalFlagOrEnv("aws-secret-access-key", "AWS_SECRET_ACCESS_KEY", "The AWS secret key.")
+	awsRegion    = OptionalFlagOrEnv("aws-region", "AWS_REGION", "The AWS region.")
 
 	osRegex       = flag.String("os-regex", ".*", "Selects OpenStack instances where the instance name contains this string. Example: (test|example)")
-	osUsername    = MustGetenv("OS_USERNAME", "")
-	osPassword    = MustGetenv("OS_PASSWORD", "")
-	osAuthURL     = MustGetenv("OS_AUTH_URL", "Often looks like http://host/identity/v3.")
-	osProjectName = MustGetenv("OS_PROJECT_NAME", "Also called 'tenant name'.")
-	osRegion      = MustGetenv("OS_REGION", "E.g., UK1 (for OVH).")
-	osDomainName  = MustGetenv("OS_PROJECT_DOMAIN_NAME", `That's "Default" for most OpenStack instances.`)
+	osUsername    = OptionalFlagOrEnv("os-username", "OS_USERNAME", "")
+	osPassword    = OptionalFlagOrEnv("os-password", "OS_PASSWORD", "")
+	osAuthURL     = OptionalFlagOrEnv("os-auth-url", "OS_AUTH_URL", "Often looks like http://host/identity/v3.")
+	osProjectName = OptionalFlagOrEnv("os-project-name", "OS_PROJECT_NAME", "Also called 'tenant name'.")
+	osRegion      = OptionalFlagOrEnv("os-region", "OS_REGION", "E.g., UK1 (for OVH).")
+	osDomainName  = OptionalFlagOrEnv("os-project-domain-name", "OS_PROJECT_DOMAIN_NAME", `That's "Default" for most OpenStack instances.`)
 
 	gcpRegex   = flag.String("gcp-regex", ".*", "Selects OpenStack instances where the instance name contains this string. Example: (test|example)")
-	gcpJsonKey = MustGetenv("GCP_JSON_KEY", `The content of the json key in plain text, not base-64 encoded.`)
+	gcpJsonKey = OptionalFlagOrEnv("gcp-json-key", "GCP_JSON_KEY", `The content of the json key in plain text, not base-64 encoded.`)
 
 	slackChannel = flag.String("slack-channel", "", `With this argument, c4 sends a message to this channel whenever VMs are deleted (doesn't send anything when this flag isn't passed). Requires SLACK_TOKEN to be set.`)
-	slackToken   = OptionalGetenv("SLACK_TOKEN", `Slack OAuth token, create one at https://api.slack.com/apps.`)
+	slackToken   = OptionalFlagOrEnv("slack-token", "SLACK_TOKEN", `Slack OAuth token, create one at https://api.slack.com/apps.`)
 
 	olderThan = flag.Duration("older-than", 24*time.Hour, "Only delete resources older than this specified value. Can be any valid Go duration, such as 10m or 8h.")
 	doIt      = flag.Bool("do-it", false, "By default, nothing is deleted. This flag enable deletion.")
@@ -55,8 +58,8 @@ func main() {
 		flag.PrintDefaults()
 		fmt.Fprintf(flag.CommandLine.Output(), "\nEnvironment variables:\n%s\n", EnvvarUsage())
 	}
-	flag.Parse()
 	ParseEnv()
+	flag.Parse()
 
 	if *showVersion {
 		fmt.Printf("%s (commit %s, built on %s)\n", version, commit, date)
@@ -87,22 +90,37 @@ func main() {
 		fmt.Printf("Removing anything older than %s.\n", bold(olderThan.String()))
 	}
 
-	awsDeleted, err := nukeAWSInstances(*awsAccessKey, *awsSecretKey, *awsRegion, awsRegex, dryRun, *olderThan)
-	if err != nil {
-		fmt.Fprintf(flag.CommandLine.Output(), "%s: while nuking AWS instances: %v\n", red("Error"), err)
-		os.Exit(1)
+	var awsDeleted []ec2.Instance
+	if ok, missing := AreSet("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"); ok {
+		awsDeleted, err = nukeAWSInstances(*awsAccessKey, *awsSecretKey, *awsRegion, awsRegex, dryRun, *olderThan)
+		if err != nil {
+			fmt.Fprintf(flag.CommandLine.Output(), "%s: while nuking AWS instances: %v\n", red("Error"), err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Fprintf(flag.CommandLine.Output(), "%s: skipping AWS due to missing env vars: %v\n", yel("Warn"), missing)
 	}
 
-	osDeleted, err := nukeOpenStackInstances(*osRegion, *osAuthURL, *osDomainName, *osUsername, *osPassword, *osProjectName, osRegex, dryRun, *olderThan)
-	if err != nil {
-		fmt.Fprintf(flag.CommandLine.Output(), "%s: while nuking OpenStack instances: %v\n", red("Error"), err)
-		os.Exit(1)
+	var osDeleted []servers.Server
+	if ok, missing := AreSet("OS_USERNAME", "OS_PASSWORD", "OS_AUTH_URL", "OS_PROJECT_NAME", "OS_REGION", "OS_PROJECT_DOMAIN_NAME"); ok {
+		osDeleted, err = nukeOpenStackInstances(*osRegion, *osAuthURL, *osDomainName, *osUsername, *osPassword, *osProjectName, osRegex, dryRun, *olderThan)
+		if err != nil {
+			fmt.Fprintf(flag.CommandLine.Output(), "%s: while nuking OpenStack instances: %v\n", red("Error"), err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Fprintf(flag.CommandLine.Output(), "%s: skipping OpenStack due to missing env vars: %v\n", yel("Warn"), missing)
 	}
 
-	gcpDeleted, err := nukeGCPInstances(*gcpJsonKey, gcpRegex, dryRun, *olderThan)
-	if err != nil {
-		fmt.Fprintf(flag.CommandLine.Output(), "%s: while nuking GCP instances: %v\n", red("Error"), err)
-		os.Exit(1)
+	var gcpDeleted []compute.Instance
+	if ok, missing := AreSet("GCP_JSON_KEY"); ok {
+		gcpDeleted, err = nukeGCPInstances(*gcpJsonKey, gcpRegex, dryRun, *olderThan)
+		if err != nil {
+			fmt.Fprintf(flag.CommandLine.Output(), "%s: while nuking GCP instances: %v\n", red("Error"), err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Fprintf(flag.CommandLine.Output(), "%s: skipping GCP due to missing variable %v\n", yel("Warn"), missing)
 	}
 
 	if *slackToken == "" || *slackChannel == "" {

@@ -151,6 +151,29 @@ message that sums up all the VMs that were deleted:
 
 ## Changelog
 
+## v1.1.0 - 04 July 2021
+
+You can now use flags to set most values. For example, `GCP_JSON_KEY` can now be
+set using the flag `--gcp-json-key`.
+
+Unrelated but here are the commands you can use to create your GCP JSON key and
+store it in [`lpass`](https://github.com/lastpass/lastpass-cli) (LastPass's
+CLI):
+
+```sh
+gcloud iam service-accounts create c4-cli --project $(gcloud config get-value project | tr ':' '/')
+gcloud projects add-iam-policy-binding jetstack-mael-valais --member=serviceAccount:c4-cli@$(gcloud config get-value project | tr ':' '/').iam.gserviceaccount.com --role=roles/compute.admin
+lpass edit c4-cli --non-interactive <<EOF
+Password: $(gcloud iam service-accounts keys create /dev/stdout --iam-account c4-cli@$(gcloud config get-value project | tr ':' '/').iam.gserviceaccount.com | jq -c)
+EOF
+```
+
+Then you can run:
+
+```sh
+c4 --gcp-json-key="$(lpass show c4-cli -p)"
+```
+
 ## v1.0.2 - 11 March 2019
 
 - Bug: the Slack message was mixing up AWS and OpenStack, it now properly
